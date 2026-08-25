@@ -1,0 +1,163 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+tensorboard_each_run: True  # Log to Tensorboard each run
+accelerator: "cuda:0"
+mlflow:
+  use: False
+  project: BREC
+  name: BREC
+wandb:
+  use: False
+  project: BREC
+  name: BREC
+dataset:
+  brec_pe_transform: True
+  format: BREC
+  name: brec
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: TypeDictNode
+  node_encoder_num_types: 1
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
+  edge_encoder_bn: False
+posenc_RRWP:
+  enable: True
+  ksteps: 32
+  add_identity: True
+  add_node_attr: False
+  add_uniform: False
+  sym_norm: False
+  k_hop: -1
+posenc_I2SG:
+  enable: True
+  pe_name: 'rrwp'
+  k_hop: 4
+  add_self_loops: False
+posenc_addX: # will activate only if there is no 'x' in graph
+  enable: True
+train:
+  mode: brec
+  batch_size: 16
+  eval_period: 1
+  enable_ckpt: True  # Checkpointing can now be disabled to save I/O when e.g. just benchmarking.
+  ckpt_best: True  # WARNING: Checkpoint every epoch a better model is found may increase I/O significantly.
+  ckpt_clean: True # Delete old ckpt each time.
+  loss_threshold: 0.
+model:
+  type: BaseGraphNet
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+  loss_threshold: 0.
+gt:
+  pos_enc:
+    enable: True
+    node_encoder:
+      enable: True
+      raw_norm: 'none'
+      post_norm: 'none'
+      name: 'MLPNodeEncoder+MLPNodeEncoder+MLPNodeEncoder'
+      pe_name: 'rrwp+log_deg+log_order'
+      in_dim: '33+1+1'
+      MLPNodeEncoder:
+        post_norm: 'none'
+        kaiming_uniform_init: True
+    edge_encoder:
+      enable: True
+      post_norm: 'none'
+      raw_norm: 'none'
+      name: 'MLPSinEdgeEncoder+EdgeFFN'
+      pe_name: 'rrwp+edge'
+      in_dim: '33+96'
+      MLPSinEdgeEncoder:
+        to_complete_graph: True
+        sin_L: 15
+        hid_dim: '192'
+        bias: True
+        add_raw_feat: True
+        add_invD: True
+        add_invN: True
+        kaiming_uniform_init: True
+        post_norm: 'none'
+        dropout: 0.
+      EdgeFFN:
+        pre_mlp_norm: 'ada_rms_norm'
+        post_mlp_norm: 'none'
+        pre_backbone_norm: 'none'
+        post_backbone_norm: 'ada_rms_norm'
+        num_blocks: 4
+        ffn_ratio: 2
+        add_weight_norm: False
+        add_spectral_norm: False
+        dropout: 0.
+        proj_drop: 0.
+        drop_path: 0.
+        drop_path_scale: True
+        act: 'gelu'
+    subgraph_encoder:
+      enable: True
+      raw_norm: 'none'
+      norm: 'batch_norm'
+      pool_norm: 'batch_norm'
+      post_norm: 'none'
+      name: 'I2GINEncoder'
+      pe_name: '+'
+      in_dim: '33'
+      num_layers: 6
+      act: 'gelu'
+      graph_pool: 'add'
+  layer_type: PPGTLayer
+  layers: 6  # 4
+  n_heads: 16
+  dim_hidden: 96 # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.
+  proj_drop: 0.
+  drop_path: 0.
+  drop_path_scale: True
+  attn_dropout: 0.
+  norm_fn: "ada_rms_norm"
+  macro_norm_type: 'pre_norm'
+  pre_backbone_norm: 'none'
+  post_backbone_norm: 'ada_rms_norm'
+  layer_scale: False  # post-norm doesn't need LayerScale
+  alpha: 1e-4
+  attn:
+    qkv_bias: True
+    urpe: True
+    l2dist: True
+    zero_token: False
+    learned_scale: False
+    gate: False
+    deg_scaler: False
+    clamp: None
+    act: 'gelu'
+    lecun_init: False
+gnn:
+  head: linear_graph_nodecay
+  post_pooling_norm: 'none'
+  trunc_init: True
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 96             # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: False
+  act: 'gelu'
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+  out_dim: 16
+  out_bn: True
+optim:
+  clip_grad_norm: True
+  optimizer: timm_adamW
+  weight_decay: 1e-5
+  base_lr: 1e-3
+  max_epoch: 50
+  num_warmup_epochs: 5
+  scheduler: timm_cosine_with_warmup
+  min_lr: 7e-5

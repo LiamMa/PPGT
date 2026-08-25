@@ -1,0 +1,141 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+tensorboard_each_run: True  # Log to Tensorboard each run
+accelerator: "cuda:0,cuda:1"
+num_workers: 0  # For Multi-GPU, it is recommended to set num_workers as 0 to avoid conflicts and OOM on RAM.
+mlflow:
+  use: False
+  project: PCQM4Mv2
+  name: PCQM4Mv2
+wandb:
+  use: False
+  entity: null  # set your wandb entity
+  project: PCQM4Mv2
+  name: PCQM4Mv2
+dataset:
+  pe_transform_on_the_fly: False
+  format: OGB
+  name: PCQM4Mv2-full
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RRWP:
+  enable: True
+  ksteps: 8                 # common range of average diameter in PCQM4Mv2 is 5-6, uppertail is 12-14
+  add_identity: True
+  add_node_attr: False
+  add_uniform: False
+  sym_norm: True
+  k_hop: -1
+train:
+  mode: custom
+  batch_size: 256
+  eval_period: 1
+  enable_ckpt: True  # Checkpointing can now be disabled to save I/O when e.g. just benchmarking.
+  ckpt_best: True  # WARNING: Checkpoint every epoch a better model is found may increase I/O significantly.
+  ckpt_clean: True # Delete old ckpt each time.
+  loss_threshold: 0.
+model:
+  type: BaseGraphNet
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: mean 
+gt:
+  pos_enc:
+    enable: True
+    node_encoder:
+      enable: True
+      raw_norm: 'none'
+      post_norm: 'none'
+      name: 'MLPNodeEncoder+MLPNodeEncoder'
+      pe_name: 'rrwp+log_order'
+      in_dim: '9+1'
+      MLPNodeEncoder:
+        post_norm: 'none'
+        kaiming_uniform_init: True
+    edge_encoder:
+      enable: True
+      post_norm: 'none'
+      raw_norm: 'none'
+      name: 'MLPSinEdgeEncoder+EdgeFFN'
+      pe_name: 'rrwp+edge'
+      in_dim: '9+128'
+      MLPSinEdgeEncoder:
+        to_complete_graph: True
+        sin_L: 5
+        hid_dim: '512'
+        bias: True
+        add_raw_feat: True
+        add_invD: False
+        add_invDsqrt: False
+        add_invN: True
+        kaiming_uniform_init: True
+        post_norm: 'none'
+        dropout: 0.0
+      EdgeFFN:
+        pre_mlp_norm: 'ada_rms_norm'
+        post_mlp_norm: 'none'
+        pre_backbone_norm: 'ada_rms_norm'
+        post_backbone_norm: 'ada_rms_norm'
+        num_blocks: 2
+        ffn_ratio: 4
+        add_weight_norm: False
+        add_spectral_norm: False
+        dropout: 0.
+        proj_drop: 0.
+        drop_path: 0.0
+        drop_path_scale: True
+        act: 'gelu'
+  layer_type: PPGTLayer
+  layers: 12
+  n_heads: 12
+  dim_hidden: 768  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dim_edge: 128
+  dropout: 0.
+  proj_drop: 0.
+  drop_path: 0.2
+  drop_path_scale: True
+  attn_dropout: 0.1
+  ffn_ratio: 4
+  norm_fn: "ada_rms_norm"
+  macro_norm_type: 'pre_norm'
+  pre_backbone_norm: 'ada_rms_norm'
+  post_backbone_norm: 'ada_rms_norm'
+  layer_scale: True  # post-norm doesn't need LayerScale
+  alpha: 1e-4
+  attn:
+    qkv_bias: True
+    urpe: True
+    l2dist: True
+    deg_scaler: False
+    clamp: None
+    act: 'gelu'
+    lecun_init: False
+gnn:
+  head: linear_graph
+  post_pooling_norm: 'none'
+  trunc_init: True
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 768             # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: False
+  act: 'gelu'
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: timm_adamW
+  weight_decay: 1e-5
+  base_lr: 1e-3
+  max_epoch: 300
+  num_warmup_epochs: 30
+  scheduler: timm_cosine_with_warmup
+  min_lr: 1e-5

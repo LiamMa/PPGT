@@ -1,0 +1,158 @@
+out_dir: results
+metric_best: accuracy
+accelerator: "cuda:0"
+mlflow:
+  use: False
+  project: ogbn-arxiv
+  name: ogbn-arxiv
+wandb:
+  use: False
+  entity: null  # set your wandb entity
+  project: ogbn-arxiv
+  name: ogbn-arxiv
+dataset:
+  pe_transform_on_the_fly: False
+  format: OGB
+  name: ogbn-arxiv
+  task: node
+  task_type: classification
+  transductive: False
+  node_encoder: True 
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_RRWP:
+  enable: True
+  ksteps: 5
+  add_identity: True
+  add_node_attr: False
+  add_uniform: False
+  sym_norm: False
+  k_hop: -1
+  add_cls_token: False
+  add_register_tokens: 0
+  dual_direction: True
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 10
+  sampler: node2subgraph
+  k_hop_subgraph: 10
+  max_nodes: 100
+  num_workers: 24
+val:
+  batch_size: 256
+model:
+  type: BaseGraphNet
+  loss_fun: cross_entropy
+  label_smoothing: 0.15
+  edge_decoding: dot
+  graph_pooling: cls_token
+gt:
+  pos_enc:
+    enable: True
+    node_encoder:
+      enable: True
+      raw_norm: 'none'
+      post_norm: 'none'
+      name: 'NodeMask+MLPNodeEncoder+TargetNodeEmb+CLSTokenEmb'
+      pe_name: 'x+rrwp+x+cls_token'
+      in_dim: '192+11+1+192'
+      NodeMask:
+        mask_rate: 0.5
+      MLPNodeEncoder:
+        post_norm: 'none'
+        kaiming_uniform_linear_init: True
+      CLSTokenEmb:
+        add_order: True
+    edge_encoder:
+      enable: True
+      post_norm: 'none'
+      raw_norm: 'none'
+      name: 'MLPSinEdgeEncoder+EdgeFFN'
+      pe_name: 'rrwp+edge+edge'
+      in_dim: '11+96+96'
+      MLPSinEdgeEncoder:
+        to_complete_graph: True
+        sin_L: 3
+        hid_dim: '192'
+        bias: True
+        add_raw_feat: True
+        add_invD: False
+        add_invN: True
+        kaiming_uniform_linear_init: True
+        dropout: 0.0
+        drop_edge: 0.0
+      EdgeFFN:
+        pre_mlp_norm: 'ada_rms_norm'
+        post_mlp_norm: 'none'
+        pre_backbone_norm: 'none'
+        post_backbone_norm: 'ada_rms_norm'
+        num_blocks: 2
+        ffn_ratio: 2
+        add_weight_norm: False
+        add_spectral_norm: False
+        dropout: 0.
+        proj_drop: 0.0
+        drop_path: 0.5
+        drop_path_scale: True
+        act: 'gelu'
+        layer_scale: True
+        alpha: 1e-5
+  layer_type: PPGTLayer
+  layers: 10
+  class_attn_layers: 2
+  n_heads: 8
+  dim_hidden: 192 # `gt.dim_hidden` must match `gnn.dim_inner`
+  dim_edge: 96 
+  dropout: 0.0
+  proj_drop: 0.0
+  drop_path: 0.5
+  drop_path_scale: True
+  attn_dropout: 0.5
+  ffn_ratio: 2
+  act: 'gelu'
+  layer_scale: True
+  alpha: 1e-5
+  norm_fn: "ada_rms_norm"
+  macro_norm_type: 'pre_norm'
+  pre_backbone_norm: 'none'
+  post_backbone_norm: 'ada_rms_norm'
+  class_attn:
+    drop_path: 0.5
+    drop_path_scale: True
+    proj_drop: 0.0
+  attn:
+    qkv_bias: True
+    urpe: True
+    l2dist: True
+    zero_token: False
+    learned_scale: False
+    gate: False
+    deg_scaler: False
+    clamp: None
+    act: 'gelu'
+gnn:
+  head: linear_graph
+  trunc_init: True
+  post_pooling_norm: 'none'
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 192
+  batchnorm: False
+  act: 'gelu'
+  dropout: 0.5
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: timm_adamW
+  weight_decay: 5e-2
+  base_lr: 2e-3
+  max_epoch: 300
+  num_warmup_epochs: 10
+  scheduler: timm_cosine_with_warmup
+  min_lr: 1e-6

@@ -1,0 +1,1 @@
+from .torch_load import patch_torch_load_for_trusted_checkpoints

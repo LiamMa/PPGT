@@ -1,0 +1,41 @@
+# Dependencies for PPGT, on top of a working PyTorch + PyTorch Geometric install.
+#
+# Install PyTorch and PyG first (they depend on your CUDA version), e.g.:
+#   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
+#       --index-url https://download.pytorch.org/whl/cu118
+#   pip install torch_geometric
+#   pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv \
+#       -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+#
+# Verified with Python 3.12 / torch 2.4.1+cu118 / torch-geometric 2.8.0.
+
+# --- numeric stack -----------------------------------------------------------
+# These three must be pinned together: scipy >= 1.16 requires numpy >= 2, which
+# rdkit 2024.3.1 does not support. scikit-learn 1.3.0 has no cp312 wheel.
+numpy==1.26.3
+scipy==1.13.1
+scikit-learn==1.3.2
+
+# --- datasets ----------------------------------------------------------------
+rdkit==2024.3.1
+ogb
+brec           # BREC experiments only; also pulls in loguru
+loguru
+
+# --- metrics -----------------------------------------------------------------
+# The metric wrappers in ppgt/logger.py use the pre-1.0 torchmetrics API.
+torchmetrics==0.9.1
+
+# --- config / training pipeline ----------------------------------------------
+yacs
+pytorch-lightning
+tensorboardX
+
+# --- operators and model utilities -------------------------------------------
+opt_einsum
+timm
+einops
+
+# --- optional: experiment tracking -------------------------------------------
+# mlflow
+# wandb

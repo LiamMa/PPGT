@@ -1,0 +1,11 @@
+# Normalise line endings: everything in this repository is stored with LF.
+* text=auto eol=lf
+
+# Never touch binary blobs.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.npy binary
+*.pt  binary
+*.pth binary
+*.zip binary
